@@ -15,7 +15,7 @@
 /* Palette: graphite base, IPF plate colours for programs (red 25kg, blue 20kg, yellow 15kg) */
 :root{
   --bg:#262A31; --surface:#333841; --line:#434955; --text:#F3F4F6; --muted:#9AA2AF;
-  --red:#D9403F; --blue:#2E6FDB; --yellow:#F1C232; --green:#3FB56B;
+  --red:#D9403F; --blue:#2E6FDB; --yellow:#F1C232; --green:#3FB56B; --purple:#B067E3;
   --accent:var(--yellow); --accent-ink:#1E1A08;
   --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
   --tabs:64px;
@@ -167,25 +167,44 @@ function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>DB.set('data'
 
 /* ---------- seed data ---------- */
 const uid=()=>Math.random().toString(36).slice(2,10);
-function seed(){
+function seedExercises(){
   const ex=(name,group)=>({id:uid(),name,group});
-  const E={
-    bench:ex('Bench press','Chest'), ohp:ex('Overhead press','Shoulders'), incl:ex('Incline dumbbell press','Chest'),
-    lat:ex('Lateral raise','Shoulders'), push:ex('Tricep pushdown','Arms'),
-    dl:ex('Deadlift','Back'), pd:ex('Lat pulldown','Back'), rowc:ex('Seated cable row','Back'), face:ex('Face pull','Shoulders'), curl:ex('Bicep curl','Arms'),
-    sq:ex('Squat','Legs'), rdl:ex('Romanian deadlift','Legs'), lp:ex('Leg press','Legs'), lc:ex('Leg curl','Legs'), calf:ex('Calf raise','Legs')
-  };
-  const pe=(e,sets,reps,rest,ss=false)=>({exId:e.id,sets,reps,rest,ss});
   return {
-    version:1,
-    exercises:Object.values(E),
-    programs:[
-      {id:uid(),name:'Push',color:'red',items:[pe(E.bench,3,8,120),pe(E.ohp,3,8,120),pe(E.incl,3,10,90),pe(E.lat,3,12,60,true),pe(E.push,3,12,60)]},
-      {id:uid(),name:'Pull',color:'blue',items:[pe(E.dl,3,5,180),pe(E.pd,3,10,90),pe(E.rowc,3,10,90),pe(E.face,3,15,60,true),pe(E.curl,3,12,60)]},
-      {id:uid(),name:'Legs',color:'yellow',items:[pe(E.sq,3,6,150),pe(E.rdl,3,8,120),pe(E.lp,3,10,90),pe(E.lc,3,12,60,true),pe(E.calf,3,15,60)]}
-    ],
-    sessions:[], active:null, rotation:0, cardioName:'Stairmaster'
+    bench:ex('Barbell bench press','Chest'), dbshoulder:ex('Seated dumbbell shoulder press','Shoulders'), incl:ex('Incline dumbbell press','Chest'),
+    lat:ex('Lateral raise','Shoulders'), push:ex('Tricep pushdown','Arms'),
+    dl:ex('Deadlift','Back'), pd:ex('Lat pulldown','Back'), csrow:ex('Chest-supported row','Back'), face:ex('Face pull','Shoulders'), curl:ex('EZ-bar curl','Arms'),
+    sq:ex('Back squat','Legs'), rdl:ex('Romanian deadlift','Legs'), lp:ex('Leg press','Legs'), slc:ex('Seated leg curl','Legs'), calf:ex('Standing calf raise','Legs'),
+    ohp:ex('Overhead press','Shoulders'), pullup:ex('Pull-up (weighted/assisted)','Back'), dbbench:ex('Dumbbell bench press','Chest'), dbrow:ex('Single-arm dumbbell row','Back'),
+    fsq:ex('Front squat','Legs'), hip:ex('Hip thrust','Legs'), bss:ex('Bulgarian split squat','Legs'), llc:ex('Lying leg curl','Legs'), hlr:ex('Hanging leg raise','Core')
   };
+}
+function seedPrograms(E){
+  const pe=(e,sets,reps,rest,ss=false)=>({exId:e.id,sets,reps,rest,ss});
+  return [
+    {id:uid(),name:'Push',color:'red',items:[pe(E.bench,4,8,150),pe(E.dbshoulder,3,10,120),pe(E.incl,3,12,90),pe(E.lat,3,15,60,true),pe(E.push,3,15,60)]},
+    {id:uid(),name:'Pull',color:'blue',items:[pe(E.dl,3,5,180),pe(E.pd,3,10,120),pe(E.csrow,3,12,90),pe(E.face,3,15,60,true),pe(E.curl,3,12,60)]},
+    {id:uid(),name:'Legs',color:'yellow',items:[pe(E.sq,4,8,180),pe(E.rdl,3,10,120),pe(E.lp,3,12,90),pe(E.slc,3,12,60),pe(E.calf,4,15,60)]},
+    {id:uid(),name:'Upper',color:'green',items:[pe(E.ohp,4,8,150),pe(E.pullup,3,8,120),pe(E.dbbench,3,10,90),pe(E.dbrow,3,12,90),pe(E.lat,3,15,60),pe(E.curl,2,12,60,true),pe(E.push,2,12,60)]},
+    {id:uid(),name:'Lower',color:'purple',items:[pe(E.fsq,4,8,180),pe(E.hip,3,10,120),pe(E.bss,3,8,90),pe(E.llc,3,12,60),pe(E.hlr,3,15,60)]}
+  ];
+}
+const SEED_VERSION=2;
+function seed(){
+  const E=seedExercises();
+  return { version:1, seedVersion:SEED_VERSION, exercises:Object.values(E), programs:seedPrograms(E), sessions:[], active:null, rotation:0, cardioName:'Stairmaster',
+    settings:{defaultRest:90,autoRest:true} };
+}
+// Load the built-in 5-day split into an existing store, reusing exercises that already exist by name
+function loadBuiltInPrograms(){
+  const E=seedExercises();
+  for(const k in E){ const hit=S.exercises.find(x=>x.name.toLowerCase()===E[k].name.toLowerCase()); if(hit) E[k]=hit; else S.exercises.push(E[k]); }
+  const progs=seedPrograms(E);
+  for(const p of progs){ const i=S.programs.findIndex(x=>x.name.toLowerCase()===p.name.toLowerCase()); if(i>=0) S.programs[i]={...p,id:S.programs[i].id}; else S.programs.push(p); }
+  S.rotation=0; S.seedVersion=SEED_VERSION;
+}
+function migrate(){
+  S.settings=Object.assign({defaultRest:90,autoRest:true},S.settings||{});
+  if((S.seedVersion||1)<SEED_VERSION){ if(S.sessions.length===0){ const n=seed(); S.exercises=n.exercises; S.programs=n.programs; S.seedVersion=SEED_VERSION; } else loadBuiltInPrograms(); }
 }
 
 /* ---------- state & routing ---------- */
@@ -194,7 +213,7 @@ let route={view:'home'};
 let history_=[];
 const $=s=>document.querySelector(s);
 const app=$('#app');
-const COLORS={red:'var(--red)',blue:'var(--blue)',yellow:'var(--yellow)',green:'var(--green)'};
+const COLORS={red:'var(--red)',blue:'var(--blue)',yellow:'var(--yellow)',green:'var(--green)',purple:'var(--purple)'};
 const exById=id=>S.exercises.find(e=>e.id===id);
 const progById=id=>S.programs.find(p=>p.id===id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -245,7 +264,7 @@ const views={
     const nextIdx=S.rotation%S.programs.length;
     const recent=S.sessions.slice(-3).reverse();
     const resume=S.active?`<button class="btn primary" data-action="resume" style="margin-bottom:16px">Resume ${esc(progById(S.active.programId)?.name||'workout')}</button>`:'';
-    return `<h1>Lift</h1><p class="muted">${S.sessions.length?`${S.sessions.length} workout${S.sessions.length>1?'s':''} logged`:'No workouts yet. Pick a program to start.'}</p>
+    return `<h1>Lift</h1><p class="muted">${S.sessions.length?`${S.sessions.length} workout${S.sessions.length>1?'s':''} logged`:'Five-day rotation. Run them in order and pick up where you left off.'}</p>
     <h2>Programs</h2>${resume}
     ${S.programs.map((p,i)=>`<button class="program ${i===nextIdx&&!S.active?'next':''}" data-action="start" data-id="${p.id}">
       <span class="swatch" style="background:${COLORS[p.color]}"></span>
@@ -274,6 +293,7 @@ const views={
       });
       html+=`</div>${it.pr?`<div class="prflash">${esc(it.pr)}</div>`:''}
         <footer><button class="btn ghost" style="width:auto" data-action="rm-set" data-ii="${ii}" ${it.sets.length<=1?'disabled':''}>− set</button>
+        <button class="btn ghost" style="width:auto" data-action="rest-now" data-ii="${ii}">Rest ${it.rest}s</button>
         <button class="btn ghost" style="width:auto" data-action="add-set" data-ii="${ii}">+ set</button></footer></div>`;
     });
     html+=`<button class="btn" data-action="add-ex-active" style="margin-bottom:12px">Add exercise</button>
@@ -337,7 +357,12 @@ const views={
       <h2>Programs</h2><div class="card" style="padding:0 16px">${S.programs.map(p=>`<button class="item" data-action="edit-prog" data-id="${p.id}">
         <span class="row" style="gap:12px"><span class="swatch" style="background:${COLORS[p.color]};height:24px"></span>${esc(p.name)}</span><span class="chev">›</span></button>`).join('')}</div>
       <button class="btn" data-action="new-prog">New program</button>
+      <button class="btn ghost" data-action="load-builtin">Reload built-in Push / Pull / Legs / Upper / Lower</button>
       <h2>Exercises</h2><button class="btn" data-action="exlist">Manage exercise list</button>
+      <h2>Rest timer</h2><div class="card stack">
+        <div class="field"><label class="f">Default rest for new exercises (seconds)</label><input type="number" inputmode="numeric" value="${S.settings.defaultRest}" data-setting-num="defaultRest"></div>
+        <label class="toggle"><input type="checkbox" data-setting-bool="autoRest" ${S.settings.autoRest?'checked':''}> Start the rest timer automatically when a set is logged</label>
+        <p class="small muted">Each exercise has its own rest time in the program editor. During a workout, tap Rest on any exercise to start its timer by hand.</p></div>
       <h2>Cardio</h2><div class="card field"><label class="f">Name shown at the end of each workout</label><input value="${esc(S.cardioName)}" data-setting="cardioName"></div>
       <h2>Rotation</h2><div class="card row"><span>Up next: <b>${esc(S.programs[S.rotation%S.programs.length]?.name||'')}</b></span><button class="btn ghost" style="width:auto" data-action="rotate">Skip</button></div>
       <h2>Data</h2><div class="stack"><button class="btn" data-action="export">Export backup (JSON)</button>
@@ -379,7 +404,7 @@ function sessionRow(s){ return `<button class="item" data-action="open-session" 
   <span class="num small muted">${fmtKg(sessionVolume(s))} kg<span class="chev"> ›</span></span></button>`; }
 
 /* ---------- charts (hand drawn, offline) ---------- */
-const GROUP_COLORS={Chest:'#D9403F',Back:'#2E6FDB',Legs:'#F1C232',Shoulders:'#3FB56B',Arms:'#B067E3',Other:'#9AA2AF'};
+const GROUP_COLORS={Chest:'#D9403F',Back:'#2E6FDB',Legs:'#F1C232',Shoulders:'#3FB56B',Arms:'#B067E3',Core:'#4FC3D9',Other:'#9AA2AF'};
 function weeklyVolume(){
   const now=Date.now(), wk=7*864e5, weeks=[]; const start=now-11*wk;
   for(let i=0;i<12;i++) weeks.push({}); 
@@ -453,14 +478,14 @@ function toggleSet(ii,si){
   st.weight=w; st.reps=r; st.done=true;
   const pr=checkPR(it.exId,w,r); if(pr.length){ it.pr=`PR: ${pr.join(', ')} — ${fmtKg(w)} × ${r}`; }
   // rest: skip if this exercise supersets into the next one
-  const paired=it.ss&&a.items[ii+1]; if(!paired) startRest(it.rest||90,exById(it.exId)?.name||'');
+  const paired=it.ss&&a.items[ii+1]; if(!paired&&S.settings.autoRest) startRest(it.rest||S.settings.defaultRest,exById(it.exId)?.name||'');
   // prefill next set
   const nx=it.sets[si+1]; if(nx&&!nx.done&&nx.weight==null){ nx.weight=w; nx.reps=r; }
   save(); render();
 }
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),1800); }
 function pickExercise(cb){ const names=S.exercises.slice().sort((a,b)=>a.name.localeCompare(b.name)); const s=prompt('Exercise name (type a new one to create it):\n'+names.map(e=>e.name).join(', ')); if(!s) return;
-  let e=S.exercises.find(x=>x.name.toLowerCase()===s.trim().toLowerCase()); if(!e){ const gsel=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Other)','Other')||'Other'; e={id:uid(),name:s.trim(),group:gsel}; S.exercises.push(e); } cb(e); }
+  let e=S.exercises.find(x=>x.name.toLowerCase()===s.trim().toLowerCase()); if(!e){ const gsel=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Core, Other)','Other')||'Other'; e={id:uid(),name:s.trim(),group:gsel}; S.exercises.push(e); } cb(e); }
 function download(name,text){ const b=new Blob([text],{type:'application/json'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),2000); }
 
 document.addEventListener('click',e=>{
@@ -472,11 +497,13 @@ document.addEventListener('click',e=>{
     'toggle-set':()=>toggleSet(+b.dataset.ii,+b.dataset.si),
     'add-set':()=>{ const it=S.active.items[+b.dataset.ii]; const l=it.sets[it.sets.length-1]; it.sets.push({weight:l?.weight??null,reps:l?.reps??null,done:false}); save(); render(); },
     'rm-set':()=>{ const it=S.active.items[+b.dataset.ii]; if(it.sets.length>1) it.sets.pop(); save(); render(); },
-    'add-ex-active':()=>pickExercise(ex=>{ S.active.items.push({exId:ex.id,reps:10,rest:90,ss:false,sets:[{weight:null,reps:null,done:false},{weight:null,reps:null,done:false},{weight:null,reps:null,done:false}]}); save(); render(); }),
+    'add-ex-active':()=>pickExercise(ex=>{ S.active.items.push({exId:ex.id,reps:10,rest:S.settings.defaultRest,ss:false,sets:[{weight:null,reps:null,done:false},{weight:null,reps:null,done:false},{weight:null,reps:null,done:false}]}); save(); render(); }),
     finish:finishWorkout,
     'cancel-workout':()=>{ if(confirm('Discard this workout? Nothing will be saved.')){ S.active=null; stopRest(); save(); history_=[]; go('home',{},false); } },
     'timer-adj':()=>{ timer.end+=(+b.dataset.v)*1000; timer.total=Math.max(1,timer.total+(+b.dataset.v)); tick(); },
     'timer-stop':stopRest,
+    'rest-now':()=>{ const it=S.active.items[+b.dataset.ii]; primeAudio(); startRest(it.rest||S.settings.defaultRest,exById(it.exId)?.name||''); },
+    'load-builtin':()=>{ if(confirm('Replace the built-in programs with the 5-day split? Your own programs and all history are kept.')){ loadBuiltInPrograms(); save(); render(); toast('Programs loaded'); } },
     'open-session':()=>go('session',{id}), 'open-ex':()=>go('exercise',{id}),
     'del-session':()=>{ if(confirm('Delete this workout?')){ S.sessions=S.sessions.filter(s=>s.id!==id); save(); history_=[]; go('history',{},false); } },
     'edit-prog':()=>go('editor',{id}),
@@ -485,10 +512,10 @@ document.addEventListener('click',e=>{
     'prog-color':()=>{ progById(route.id).color=b.dataset.c; save(); render(); },
     'ed-up':()=>{ const p=progById(route.id), i=+b.dataset.i; [p.items[i-1],p.items[i]]=[p.items[i],p.items[i-1]]; save(); render(); },
     'ed-rm':()=>{ progById(route.id).items.splice(+b.dataset.i,1); save(); render(); },
-    'ed-add':()=>pickExercise(ex=>{ progById(route.id).items.push({exId:ex.id,sets:3,reps:10,rest:90,ss:false}); save(); render(); }),
+    'ed-add':()=>pickExercise(ex=>{ progById(route.id).items.push({exId:ex.id,sets:3,reps:10,rest:S.settings.defaultRest,ss:false}); save(); render(); }),
     exlist:()=>go('exlist'),
     'new-ex':()=>pickExercise(()=>{ save(); render(); }),
-    'rename-ex':()=>{ const ex=exById(id); const n=prompt('Exercise name',ex.name); if(n===null) return; const g=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Other)',ex.group); ex.name=n.trim()||ex.name; ex.group=(g||ex.group).trim(); save(); render(); },
+    'rename-ex':()=>{ const ex=exById(id); const n=prompt('Exercise name',ex.name); if(n===null) return; const g=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Core, Other)',ex.group); ex.name=n.trim()||ex.name; ex.group=(g||ex.group).trim(); save(); render(); },
     'del-ex':()=>{ const used=S.sessions.some(s=>s.sets.some(x=>x.exId===id))||S.programs.some(p=>p.items.some(x=>x.exId===id)); if(used){ toast('In use by a program or logged workout'); return; } if(confirm('Delete exercise?')){ S.exercises=S.exercises.filter(x=>x.id!==id); save(); render(); } },
     rotate:()=>{ S.rotation++; save(); render(); },
     export:()=>download(`lift-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1)),
@@ -502,6 +529,8 @@ document.addEventListener('change',e=>{
   if(t.matches('#importfile')){ const f=t.files[0]; if(!f) return; f.text().then(txt=>{ const d=JSON.parse(txt); if(!d.exercises||!d.programs||!d.sessions) throw new Error('not a Lift backup'); S=d; save(); history_=[]; go('home',{},false); toast('Backup imported'); }).catch(err=>toast('Import failed: '+err.message)); t.value=''; return; }
   if(t.dataset.f){ const st=S.active.items[+t.dataset.ii].sets[+t.dataset.si]; const v=parseFloat(t.value); st[t.dataset.f]=isNaN(v)?null:v; save(); return; }
   if(t.dataset.cardio){ const v=parseFloat(t.value); S.active.cardio[t.dataset.cardio]=isNaN(v)?null:v; save(); return; }
+  if(t.dataset.settingNum){ const v=parseInt(t.value,10); if(v>=0) S.settings[t.dataset.settingNum]=v; save(); return; }
+  if(t.dataset.settingBool){ S.settings[t.dataset.settingBool]=t.checked; save(); return; }
   if(t.dataset.setting){ S[t.dataset.setting]=t.value.trim()||S[t.dataset.setting]; save(); return; }
   if(t.dataset.prog){ const p=progById(route.id); p[t.dataset.prog]=t.value.trim()||p[t.dataset.prog]; save(); return; }
   if(t.dataset.ed){ const it=progById(route.id).items[+t.dataset.i]; const k=t.dataset.ed;
@@ -512,7 +541,7 @@ document.addEventListener('focusin',e=>{ if(e.target.matches('input[type=number]
 /* ---------- boot ---------- */
 (async()=>{
   try{ S=await DB.get('data'); }catch(e){}
-  if(!S){ S=seed(); save(); }
+  if(!S){ S=seed(); } migrate(); save();
   if(S.active) route={view:'workout'};
   render();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
