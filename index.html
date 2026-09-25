@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Lift</title>
+<!-- Lift v1.3.0 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -168,8 +169,9 @@ function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>DB.set('data'
 /* ---------- seed data ---------- */
 const uid=()=>Math.random().toString(36).slice(2,10);
 function seedExercises(){
-  const ex=(name,group)=>({id:uid(),name,group});
+  const ex=(name,group,inv=false)=>({id:uid(),name,group,inv});
   return {
+    apu:ex('Assisted pull-up','Back',true), neg:ex('Pull-up negatives','Back'), rdf:ex('Rear-delt flye','Shoulders'),
     bench:ex('Barbell bench press','Chest'), dbshoulder:ex('Seated dumbbell shoulder press','Shoulders'), incl:ex('Incline dumbbell press','Chest'),
     lat:ex('Lateral raise','Shoulders'), push:ex('Tricep pushdown','Arms'),
     dl:ex('Deadlift','Back'), pd:ex('Lat pulldown','Back'), csrow:ex('Chest-supported row','Back'), face:ex('Face pull','Shoulders'), curl:ex('EZ-bar curl','Arms'),
@@ -182,28 +184,29 @@ function seedPrograms(E){
   const pe=(e,sets,reps,rest,ss=false)=>({exId:e.id,sets,reps,rest,ss});
   return [
     {id:uid(),name:'Push',color:'red',items:[pe(E.bench,4,8,150),pe(E.dbshoulder,3,10,120),pe(E.incl,3,12,90),pe(E.lat,3,15,60,true),pe(E.push,3,15,60)]},
-    {id:uid(),name:'Pull',color:'blue',items:[pe(E.dl,3,5,180),pe(E.pd,3,10,120),pe(E.csrow,3,12,90),pe(E.face,3,15,60,true),pe(E.curl,3,12,60)]},
+    {id:uid(),name:'Pull',color:'blue',items:[pe(E.apu,4,8,150),pe(E.pd,3,10,120),pe(E.neg,3,4,120),pe(E.csrow,3,12,90),pe(E.rdf,3,15,60,true),pe(E.curl,3,12,60)]},
     {id:uid(),name:'Legs',color:'yellow',items:[pe(E.sq,4,8,180),pe(E.rdl,3,10,120),pe(E.lp,3,12,90),pe(E.slc,3,12,60),pe(E.calf,4,15,60)]},
-    {id:uid(),name:'Upper',color:'green',items:[pe(E.ohp,4,8,150),pe(E.pullup,3,8,120),pe(E.dbbench,3,10,90),pe(E.dbrow,3,12,90),pe(E.lat,3,15,60),pe(E.curl,2,12,60,true),pe(E.push,2,12,60)]},
+    {id:uid(),name:'Upper',color:'green',items:[pe(E.ohp,4,8,150),pe(E.apu,3,8,150),pe(E.dbbench,3,10,90),pe(E.dbrow,3,12,90),pe(E.lat,3,15,60),pe(E.curl,2,12,60,true),pe(E.push,2,12,60)]},
     {id:uid(),name:'Lower',color:'purple',items:[pe(E.fsq,4,8,180),pe(E.hip,3,10,120),pe(E.bss,3,8,90),pe(E.llc,3,12,60),pe(E.hlr,3,15,60)]}
   ];
 }
-const SEED_VERSION=2;
+const SEED_VERSION=3;
 function seed(){
   const E=seedExercises();
-  return { version:1, seedVersion:SEED_VERSION, exercises:Object.values(E), programs:seedPrograms(E), sessions:[], active:null, rotation:0, cardioName:'Stairmaster',
+  return { version:1, seedVersion:SEED_VERSION, exercises:Object.values(E), programs:seedPrograms(E), sessions:[], active:null, rotation:0, cardioName:'Stairmaster', cardioOptions:['Stairmaster','Treadmill','Bike','Rower','Elliptical','Jog','Walk'],
     settings:{defaultRest:90,autoRest:true} };
 }
 // Load the built-in 5-day split into an existing store, reusing exercises that already exist by name
 function loadBuiltInPrograms(){
   const E=seedExercises();
-  for(const k in E){ const hit=S.exercises.find(x=>x.name.toLowerCase()===E[k].name.toLowerCase()); if(hit) E[k]=hit; else S.exercises.push(E[k]); }
+  for(const k in E){ const hit=S.exercises.find(x=>x.name.toLowerCase()===E[k].name.toLowerCase()); if(hit){ if(E[k].inv) hit.inv=true; E[k]=hit; } else S.exercises.push(E[k]); }
   const progs=seedPrograms(E);
   for(const p of progs){ const i=S.programs.findIndex(x=>x.name.toLowerCase()===p.name.toLowerCase()); if(i>=0) S.programs[i]={...p,id:S.programs[i].id}; else S.programs.push(p); }
   S.rotation=0; S.seedVersion=SEED_VERSION;
 }
 function migrate(){
   S.settings=Object.assign({defaultRest:90,autoRest:true},S.settings||{});
+  if(!S.cardioOptions||!S.cardioOptions.length){ const first=S.cardioName||'Stairmaster'; S.cardioOptions=[first,...['Treadmill','Bike','Rower','Elliptical','Jog','Walk'].filter(x=>x!==first)]; }
   if((S.seedVersion||1)<SEED_VERSION){ if(S.sessions.length===0){ const n=seed(); S.exercises=n.exercises; S.programs=n.programs; S.seedVersion=SEED_VERSION; } else loadBuiltInPrograms(); }
 }
 
@@ -219,6 +222,7 @@ const progById=id=>S.programs.find(p=>p.id===id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDate=ts=>new Date(ts).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
 const fmtKg=n=>(Math.round(n*10)/10).toString();
+const fmtSet=x=>(x.weight===0?'BW':fmtKg(x.weight))+'×'+x.reps;
 const e1rm=(w,r)=>r===1?w:w*(1+r/30);
 
 function go(view,params={},push=true){ if(push) history_.push(route); route={view,...params}; window.scrollTo(0,0); render(); }
@@ -226,27 +230,30 @@ function back(){ route=history_.pop()||{view:'home'}; render(); }
 
 /* ---------- stats ---------- */
 function setsFor(exId,excludeActive=true){
-  const out=[]; for(const s of S.sessions) for(const st of s.sets) if(st.exId===exId&&st.weight>0&&st.reps>0) out.push({...st,date:s.date,sessionId:s.id});
+  const out=[]; for(const s of S.sessions) for(const st of s.sets) if(st.exId===exId&&st.weight>=0&&st.reps>0) out.push({...st,date:s.date,sessionId:s.id});
   return out;
 }
 function lastSessionSets(exId){ for(let i=S.sessions.length-1;i>=0;i--){ const st=S.sessions[i].sets.filter(x=>x.exId===exId); if(st.length) return st; } return null; }
 function bests(exId){
-  const sets=setsFor(exId); let w=0,e=0,vol=0; const reps={};
-  for(const s of sets){ if(s.weight>w) w=s.weight; const v=e1rm(s.weight,s.reps); if(v>e) e=v; if(!reps[s.reps]||s.weight>reps[s.reps]) reps[s.reps]=s.weight; }
-  return {weight:w,e1rm:e,reps,count:sets.length};
+  const sets=setsFor(exId); const inv=!!exById(exId)?.inv; let w=inv?Infinity:0,e=0,maxReps=0; const reps={};
+  for(const s of sets){ if(inv?s.weight<w:s.weight>w) w=s.weight; const v=e1rm(s.weight,s.reps); if(v>e) e=v; if(s.reps>maxReps) maxReps=s.reps;
+    if(reps[s.reps]===undefined||(inv?s.weight<reps[s.reps]:s.weight>reps[s.reps])) reps[s.reps]=s.weight; }
+  return {weight:sets.length?w:0,e1rm:e,reps,maxReps,count:sets.length,inv};
 }
 function checkPR(exId,weight,reps){
   const b=bests(exId); const flags=[];
   if(b.count===0) return flags;
+  if(b.inv){ if(weight<b.weight) flags.push('Least assistance'); if(reps>b.maxReps) flags.push('Most reps');
+    if(!flags.length && (b.reps[reps]===undefined||weight<b.reps[reps])) flags.push(reps+'-rep'); return flags; }
   if(weight>b.weight) flags.push('Heaviest');
-  if(e1rm(weight,reps)>b.e1rm+0.01) flags.push('Est. 1RM');
-  if(!flags.length && (!b.reps[reps]||weight>b.reps[reps])) flags.push(reps+'-rep');
+  if(weight>0&&e1rm(weight,reps)>b.e1rm+0.01) flags.push('Est. 1RM');
+  if(!flags.length && (b.reps[reps]===undefined||weight>b.reps[reps])) flags.push(reps+'-rep');
   return flags;
 }
 function sessionVolume(s){ return s.sets.reduce((a,x)=>a+x.weight*x.reps,0); }
 function perSession(exId){ // one point per session: top set weight, e1rm, volume
-  const out=[]; for(const s of S.sessions){ const st=s.sets.filter(x=>x.exId===exId&&x.weight>0&&x.reps>0); if(!st.length) continue;
-    out.push({date:s.date,top:Math.max(...st.map(x=>x.weight)),e1rm:Math.max(...st.map(x=>e1rm(x.weight,x.reps))),vol:st.reduce((a,x)=>a+x.weight*x.reps,0)}); }
+  const out=[]; const inv=!!exById(exId)?.inv; for(const s of S.sessions){ const st=s.sets.filter(x=>x.exId===exId&&x.weight>=0&&x.reps>0); if(!st.length) continue;
+    out.push({date:s.date,top:inv?Math.min(...st.map(x=>x.weight)):Math.max(...st.map(x=>x.weight)),reps:Math.max(...st.map(x=>x.reps)),e1rm:Math.max(...st.map(x=>e1rm(x.weight,x.reps))),vol:st.reduce((a,x)=>a+x.weight*x.reps,0)}); }
   return out;
 }
 
@@ -282,10 +289,11 @@ const views={
     a.items.forEach((it,ii)=>{
       const ex=exById(it.exId); const last=lastSessionSets(it.exId); const nextIsPair=it.ss&&a.items[ii+1];
       html+=`<div class="ex" data-ii="${ii}"><header><h3>${esc(ex?.name||'Exercise')}</h3><span class="target">${it.sets.length} × ${it.reps} · rest ${it.rest}s</span></header>
+        ${ex?.inv?'<div class="ss-note">Enter the assistance weight; less is better</div>':''}
         ${nextIsPair?`<div class="ss-note">Superset with ${esc(exById(a.items[ii+1].exId)?.name||'')} — rest after the pair</div>`:''}
         <div class="sets"><div class="hd">Set</div><div class="hd">kg</div><div class="hd">Reps</div><div class="hd"></div>`;
       it.sets.forEach((st,si)=>{
-        const l=last&&last[si]; const lastTxt=l?`<span class="last">last <span class="h">${fmtKg(l.weight)}×${l.reps}</span></span>`:'<span class="last">&nbsp;</span>';
+        const l=last&&last[si]; const lastTxt=l?`<span class="last">last <span class="h">${fmtSet(l)}</span></span>`:'<span class="last">&nbsp;</span>';
         html+=`<div class="set-n ${st.done?'done':''}">${si+1}${lastTxt}</div>
           <input type="number" inputmode="decimal" step="0.5" min="0" value="${st.weight??''}" placeholder="${l?fmtKg(l.weight):'–'}" data-f="weight" data-ii="${ii}" data-si="${si}" ${st.done?'disabled':''}>
           <input type="number" inputmode="numeric" step="1" min="0" value="${st.reps??''}" placeholder="${l?l.reps:it.reps}" data-f="reps" data-ii="${ii}" data-si="${si}" ${st.done?'disabled':''}>
@@ -297,10 +305,13 @@ const views={
         <button class="btn ghost" style="width:auto" data-action="add-set" data-ii="${ii}">+ set</button></footer></div>`;
     });
     html+=`<button class="btn" data-action="add-ex-active" style="margin-bottom:12px">Add exercise</button>
-      <div class="card"><h3 style="margin-bottom:10px">${esc(S.cardioName)}</h3><div class="grid3">
+      <div class="card"><div class="row" style="margin-bottom:10px"><h3>Cardio</h3>
+        <select data-cardio-type style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:44px;-webkit-appearance:none;font-weight:700">
+          ${S.cardioOptions.map(o=>`<option ${o===(a.cardio.type||S.cardioOptions[0])?'selected':''}>${esc(o)}</option>`).join('')}<option value="__none" ${a.cardio.type==='__none'?'selected':''}>None today</option></select></div>
+        ${a.cardio.type==='__none'?'':`<div class="grid3">
         <div class="field"><label class="f">Minutes</label><input type="number" inputmode="numeric" value="${a.cardio.minutes??''}" data-cardio="minutes"></div>
         <div class="field"><label class="f">Level</label><input type="number" inputmode="numeric" value="${a.cardio.level??''}" data-cardio="level"></div>
-        <div class="field"><label class="f">kcal</label><input type="number" inputmode="numeric" value="${a.cardio.kcal??''}" data-cardio="kcal"></div></div></div>
+        <div class="field"><label class="f">kcal</label><input type="number" inputmode="numeric" value="${a.cardio.kcal??''}" data-cardio="kcal"></div></div>`}</div>
       <button class="btn primary" data-action="finish" style="margin-top:8px">Finish workout</button>`;
     return html;
   },
@@ -321,8 +332,8 @@ const views={
     return `<div class="topbar"><button class="back" data-action="back">‹ Back</button></div>
       <h1>${esc(s.name)}</h1><p class="muted">${fmtDate(s.date)}${dur?` · ${dur} min`:''} · ${fmtKg(sessionVolume(s))} kg volume</p>
       ${Object.entries(byEx).map(([id,sets])=>`<div class="card"><h3>${esc(exById(id)?.name||'Exercise')}</h3>
-        <p class="num" style="margin-top:6px">${sets.map(x=>`${fmtKg(x.weight)}×${x.reps}`).join(' &nbsp; ')}</p></div>`).join('')}
-      ${s.cardio&&(s.cardio.minutes||s.cardio.kcal)?`<div class="card"><h3>${esc(S.cardioName)}</h3><p class="muted" style="margin-top:6px">${[s.cardio.minutes&&s.cardio.minutes+' min',s.cardio.level&&'level '+s.cardio.level,s.cardio.kcal&&s.cardio.kcal+' kcal'].filter(Boolean).join(' · ')}</p></div>`:''}
+        <p class="num" style="margin-top:6px">${sets.map(fmtSet).join(' &nbsp; ')}</p></div>`).join('')}
+      ${s.cardio&&(s.cardio.minutes||s.cardio.kcal)?`<div class="card"><h3>${esc(s.cardio.type||S.cardioName)}</h3><p class="muted" style="margin-top:6px">${[s.cardio.minutes&&s.cardio.minutes+' min',s.cardio.level&&'level '+s.cardio.level,s.cardio.kcal&&s.cardio.kcal+' kcal'].filter(Boolean).join(' · ')}</p></div>`:''}
       <button class="btn danger" data-action="del-session" data-id="${s.id}" style="margin-top:12px">Delete workout</button>`;
   },
 
@@ -331,23 +342,25 @@ const views={
     return `<h1>Progress</h1><p class="muted">Tap an exercise for records and charts.</p>
       <div class="card" style="padding:0 16px;margin-top:16px">${list.map(e=>{const b=bests(e.id);return `<button class="item" data-action="open-ex" data-id="${e.id}">
         <span><span>${esc(e.name)}</span><br><span class="small muted">${esc(e.group)}</span></span>
-        <span class="num">${b.count?`<b>${fmtKg(b.weight)}</b> <span class="muted small">kg best</span>`:'<span class="muted small">no data</span>'}<span class="chev"> ›</span></span></button>`;}).join('')}</div>`;
+        <span class="num">${b.count?`<b>${fmtKg(b.weight)}</b> <span class="muted small">${e.inv?'kg assist':'kg best'}</span>`:'<span class="muted small">no data</span>'}<span class="chev"> ›</span></span></button>`;}).join('')}</div>`;
   },
 
   exercise(){
     const e=exById(route.id); if(!e) return views.exercises();
     const b=bests(e.id); const pts=perSession(e.id);
-    const repRows=Object.keys(b.reps).map(Number).sort((a,c)=>a-c).map(r=>`<tr><td>${r} rep${r>1?'s':''}</td><td>${fmtKg(b.reps[r])} kg</td><td>${fmtKg(e1rm(b.reps[r],r))} kg</td></tr>`).join('');
+    const repRows=Object.keys(b.reps).map(Number).sort((a,c)=>a-c).map(r=>`<tr><td>${r} rep${r>1?'s':''}</td><td>${fmtKg(b.reps[r])} kg</td>${e.inv?'':`<td>${fmtKg(e1rm(b.reps[r],r))} kg</td>`}</tr>`).join('');
     return `<div class="topbar"><button class="back" data-action="back">‹ Back</button></div>
       <h1>${esc(e.name)}</h1><p class="muted">${esc(e.group)} · ${pts.length} session${pts.length===1?'':'s'}</p>
-      ${b.count?`<div class="grid2" style="margin-top:16px"><div class="stat"><div class="v num">${fmtKg(b.weight)} kg</div><div class="l">Heaviest set</div></div>
-        <div class="stat"><div class="v num">${fmtKg(b.e1rm)} kg</div><div class="l">Best estimated 1RM</div></div></div>
-      <div class="chart-title">Estimated 1RM</div><div class="card"><canvas data-chart="e1rm" data-id="${e.id}"></canvas></div>
-      <div class="chart-title">Top set weight</div><div class="card"><canvas data-chart="top" data-id="${e.id}"></canvas></div>
+      ${b.count?`<div class="grid2" style="margin-top:16px"><div class="stat"><div class="v num">${fmtKg(b.weight)} kg</div><div class="l">${e.inv?'Least assistance':'Heaviest set'}</div></div>
+        <div class="stat"><div class="v num">${e.inv?b.maxReps:fmtKg(b.e1rm)+' kg'}</div><div class="l">${e.inv?'Most reps in a set':'Best estimated 1RM'}</div></div></div>
+      ${e.inv?`<div class="chart-title">Assistance weight (lower is better)</div><div class="card"><canvas data-chart="top" data-id="${e.id}"></canvas></div>
+      <div class="chart-title">Best reps per session</div><div class="card"><canvas data-chart="reps" data-id="${e.id}"></canvas></div>`
+      :`<div class="chart-title">Estimated 1RM</div><div class="card"><canvas data-chart="e1rm" data-id="${e.id}"></canvas></div>
+      <div class="chart-title">Top set weight</div><div class="card"><canvas data-chart="top" data-id="${e.id}"></canvas></div>`}
       <div class="chart-title">Volume per session</div><div class="card"><canvas data-chart="vol" data-id="${e.id}"></canvas></div>
-      <h2>Rep records</h2><div class="card"><table><tr><th>Reps</th><th>Best weight</th><th>Est. 1RM</th></tr>${repRows}</table></div>
+      <h2>Rep records</h2><div class="card"><table><tr><th>Reps</th><th>${e.inv?'Least assistance':'Best weight'}</th>${e.inv?'':'<th>Est. 1RM</th>'}</tr>${repRows}</table></div>
       <h2>Log</h2><div class="card">${pts.slice().reverse().map(p=>{const s=S.sessions.find(x=>x.date===p.date);const sets=s.sets.filter(x=>x.exId===e.id);
-        return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="muted small">${fmtDate(p.date)}</span><span class="num small">${sets.map(x=>`${fmtKg(x.weight)}×${x.reps}`).join('  ')}</span></div>`;}).join('')}</div>`
+        return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="muted small">${fmtDate(p.date)}</span><span class="num small">${sets.map(fmtSet).join('  ')}</span></div>`;}).join('')}</div>`
       :`<div class="empty">Log this exercise in a workout and your records will appear here.</div>`}
       <button class="btn ghost" data-action="rename-ex" data-id="${e.id}" style="margin-top:12px">Rename or change muscle group</button>`;
   },
@@ -363,12 +376,12 @@ const views={
         <div class="field"><label class="f">Default rest for new exercises (seconds)</label><input type="number" inputmode="numeric" value="${S.settings.defaultRest}" data-setting-num="defaultRest"></div>
         <label class="toggle"><input type="checkbox" data-setting-bool="autoRest" ${S.settings.autoRest?'checked':''}> Start the rest timer automatically when a set is logged</label>
         <p class="small muted">Each exercise has its own rest time in the program editor. During a workout, tap Rest on any exercise to start its timer by hand.</p></div>
-      <h2>Cardio</h2><div class="card field"><label class="f">Name shown at the end of each workout</label><input value="${esc(S.cardioName)}" data-setting="cardioName"></div>
+      <h2>Cardio</h2><div class="card field"><label class="f">Options offered at the end of a workout (comma separated, first is the default)</label><input value="${esc(S.cardioOptions.join(', '))}" data-setting-list="cardioOptions"></div>
       <h2>Rotation</h2><div class="card row"><span>Up next: <b>${esc(S.programs[S.rotation%S.programs.length]?.name||'')}</b></span><button class="btn ghost" style="width:auto" data-action="rotate">Skip</button></div>
       <h2>Data</h2><div class="stack"><button class="btn" data-action="export">Export backup (JSON)</button>
       <button class="btn" data-action="import">Import backup</button><input type="file" id="importfile" accept="application/json" hidden>
       <button class="btn danger" data-action="reset">Reset everything</button></div>
-      <p class="small muted" style="margin-top:20px">Data lives on this phone only. Export a backup now and then.</p>`;
+      <p class="small muted" style="margin-top:20px">Data lives on this phone only. Export a backup now and then.</p><p class="small muted">Lift v1.3.0</p>`;
   },
 
   editor(){
@@ -424,7 +437,7 @@ function drawChart(c){
     g.fillStyle='#9AA2AF'; g.textAlign='left'; g.fillText('11 wks ago',pad.l,h-6); g.textAlign='right'; g.fillText('this week',w-pad.r,h-6); return;
   }
   const pts=perSession(c.dataset.id); const key=c.dataset.chart; const ys=pts.map(p=>p[key]); if(!ys.length) return;
-  const max=Math.max(...ys), min=key==='vol'?0:Math.min(...ys); const span=Math.max(1,max-min); const lo=key==='vol'?0:min-span*0.15, hi=max+span*0.15;
+  const max=Math.max(...ys), min=key==='vol'?0:Math.min(...ys); const span=Math.max(1,max-min); const lo=(key==='vol'||key==='reps')?0:min-span*0.15, hi=max+span*0.15;
   grid(g,w,h,pad,hi,3,lo);
   const X=i=>pad.l+(pts.length===1?0.5:i/(pts.length-1))*(w-pad.l-pad.r), Y=v=>h-pad.b-((v-lo)/(hi-lo))*(h-pad.t-pad.b);
   g.strokeStyle='#F1C232'; g.lineWidth=2.5; g.lineJoin='round'; g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(X(i),Y(p[key])):g.moveTo(X(i),Y(p[key]))); g.stroke();
@@ -458,13 +471,14 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 /* ---------- actions ---------- */
 function startWorkout(prog){
   const items=(prog?prog.items:[]).map(it=>({exId:it.exId,reps:it.reps,rest:it.rest,ss:it.ss,sets:Array.from({length:it.sets},()=>({weight:null,reps:null,done:false}))}));
-  S.active={id:uid(),programId:prog?.id||null,name:prog?.name||'Workout',date:Date.now(),start:Date.now(),items,cardio:{}};
+  S.active={id:uid(),programId:prog?.id||null,name:prog?.name||'Workout',date:Date.now(),start:Date.now(),items,cardio:{type:S.cardioOptions[0]}};
   save(); primeAudio(); keepAwake(); go('workout');
 }
 function finishWorkout(){
-  const a=S.active; const sets=[]; a.items.forEach(it=>it.sets.forEach(st=>{ if(st.done&&st.weight>0&&st.reps>0) sets.push({exId:it.exId,weight:st.weight,reps:st.reps}); }));
+  const a=S.active; const sets=[]; a.items.forEach(it=>it.sets.forEach(st=>{ if(st.done&&st.weight>=0&&st.reps>0) sets.push({exId:it.exId,weight:st.weight,reps:st.reps}); }));
   if(!sets.length&&!a.cardio.minutes){ if(!confirm('Nothing logged. Finish anyway?')) return; }
-  S.sessions.push({id:a.id,programId:a.programId,name:a.name,date:a.date,start:a.start,end:Date.now(),sets,cardio:a.cardio});
+  const cardio=(a.cardio.type==='__none'||!(a.cardio.minutes||a.cardio.kcal))?null:a.cardio;
+  S.sessions.push({id:a.id,programId:a.programId,name:a.name,date:a.date,start:a.start,end:Date.now(),sets,cardio});
   if(a.programId){ const idx=S.programs.findIndex(p=>p.id===a.programId); if(idx>=0) S.rotation=idx+1; }
   S.active=null; stopRest(); if(wake) wake.release?.(); save(); history_=[]; go('session',{id:a.id},false); toast('Workout saved');
 }
@@ -515,7 +529,7 @@ document.addEventListener('click',e=>{
     'ed-add':()=>pickExercise(ex=>{ progById(route.id).items.push({exId:ex.id,sets:3,reps:10,rest:S.settings.defaultRest,ss:false}); save(); render(); }),
     exlist:()=>go('exlist'),
     'new-ex':()=>pickExercise(()=>{ save(); render(); }),
-    'rename-ex':()=>{ const ex=exById(id); const n=prompt('Exercise name',ex.name); if(n===null) return; const g=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Core, Other)',ex.group); ex.name=n.trim()||ex.name; ex.group=(g||ex.group).trim(); save(); render(); },
+    'rename-ex':()=>{ const ex=exById(id); const n=prompt('Exercise name',ex.name); if(n===null) return; const g=prompt('Muscle group (Chest, Back, Legs, Shoulders, Arms, Core, Other)',ex.group); ex.name=n.trim()||ex.name; ex.group=(g||ex.group).trim(); ex.inv=confirm('Is a LOWER weight better for this exercise (e.g. assisted pull-up)? OK = yes, Cancel = no'); save(); render(); },
     'del-ex':()=>{ const used=S.sessions.some(s=>s.sets.some(x=>x.exId===id))||S.programs.some(p=>p.items.some(x=>x.exId===id)); if(used){ toast('In use by a program or logged workout'); return; } if(confirm('Delete exercise?')){ S.exercises=S.exercises.filter(x=>x.id!==id); save(); render(); } },
     rotate:()=>{ S.rotation++; save(); render(); },
     export:()=>download(`lift-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1)),
@@ -528,7 +542,9 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.matches('#importfile')){ const f=t.files[0]; if(!f) return; f.text().then(txt=>{ const d=JSON.parse(txt); if(!d.exercises||!d.programs||!d.sessions) throw new Error('not a Lift backup'); S=d; save(); history_=[]; go('home',{},false); toast('Backup imported'); }).catch(err=>toast('Import failed: '+err.message)); t.value=''; return; }
   if(t.dataset.f){ const st=S.active.items[+t.dataset.ii].sets[+t.dataset.si]; const v=parseFloat(t.value); st[t.dataset.f]=isNaN(v)?null:v; save(); return; }
+  if(t.hasAttribute('data-cardio-type')){ S.active.cardio.type=t.value; save(); render(); return; }
   if(t.dataset.cardio){ const v=parseFloat(t.value); S.active.cardio[t.dataset.cardio]=isNaN(v)?null:v; save(); return; }
+  if(t.dataset.settingList){ const arr=t.value.split(',').map(x=>x.trim()).filter(Boolean); if(arr.length){ S[t.dataset.settingList]=arr; S.cardioName=arr[0]; } save(); render(); return; }
   if(t.dataset.settingNum){ const v=parseInt(t.value,10); if(v>=0) S.settings[t.dataset.settingNum]=v; save(); return; }
   if(t.dataset.settingBool){ S.settings[t.dataset.settingBool]=t.checked; save(); return; }
   if(t.dataset.setting){ S[t.dataset.setting]=t.value.trim()||S[t.dataset.setting]; save(); return; }
