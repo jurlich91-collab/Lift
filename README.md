@@ -14,6 +14,7 @@ Open the URL in Safari > Share > Add to Home Screen. Launch from the icon so it 
 Replace `index.html` and `sw.js` in the repo. The `CACHE` name in `sw.js` is bumped each release so phones pick up the new version (open the app, close it fully, open again).
 
 ## Changelog
+- **1.8.0** — Diagrams for every mobility exercise and level (start and end positions, what to feel, kit variants), a full illustrated library of the stretches and extras, and a demo-search button on each step.
 - **1.7.1** — Dinner yoghurt halved to 90 g.
 - **1.7.0** — 1.5.1 meal plan yields merged with the Mobility tab (1.5.1 and 1.6.0 were built in parallel).
 - **1.6.0** — Mobility tab: guided nightly stretch, activation and light calisthenics routine with progression ladders, pain check-ins and knee-to-wall re-tests.
