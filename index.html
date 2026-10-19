@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Lift</title>
-<!-- Lift v1.8.0 -->
+<!-- Lift v1.8.1 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -261,39 +261,32 @@ const SEED_VERSION=3;
    # Meal name | flags              a meal. Flags: "train" = training days only, "alt" = swap option, "x2" = eaten twice
    Food | qty | P | C | F | kcal    one line per food
    > note text                      notes shown under the plan                                        */
-const MEAL_PLAN_VERSION=4;
-const MEAL_PLAN_TEXT=`@targets 175 | 140 | 60 | 1950
-# Pre-workout: creamed rice + whey | train
-Aunt Betty's Rice 2 Go Creamed Rice, vanilla | 1 pot (100 g) | 3.6 | 17.6 | 1.7 | 100
-Whey protein, stirred into the rice | 1/2 scoop (19.5 g) | 10.5 | 5.7 | 1.15 | 77
-# Shake
-Whey protein, chocolate | 1 scoop (39 g) | 21 | 11.4 | 2.3 | 153
+const MEAL_PLAN_VERSION=5;
+const MEAL_PLAN_TEXT=`@targets 175 | 150 | 60 | 1900
+# Pre-workout: creamed rice | train
+Aunt Betty's Rice 2 Go Creamed Rice, vanilla, nothing added | 1 pot (100 g) | 3.6 | 17.6 | 1.7 | 100
+# Post-workout shake
+Whey protein, chocolate | 1.5 scoops (58.5 g) | 31.5 | 17.1 | 3.5 | 229
 Oats, ground | 1 scoop (1/3 cup, ~30 g) | 3.5 | 17.7 | 2.6 | 112
 Chia seeds | 1/2 tbsp (7.5 g) | 1.25 | 3 | 2.25 | 36
 Milk, standard | 250 ml | 8 | 12 | 8 | 148
-# Egg breakfast (instead of the shake) | alt
-Eggs, size 7, no oil | 3 | 20.8 | 1.2 | 15.7 | 236
-Vogel's Original Mixed Grain toast | 2 slices (88 g) | 8.5 | 30.5 | 1.2 | 177
-Whey in water | 1/2 scoop (19.5 g) | 10.5 | 5.7 | 1.15 | 77
-# Lunch: rotisserie chicken noodles
-High Mark Egg Noodles Round, cooked | 150 g (1/4 of 280 g pack) | 7.2 | 40 | 0.5 | 200
-Rotisserie chicken, no skin or bones | ~168 g (1/4 of 670 g meat) | 48.6 | 0 | 12.4 | 319
-Bertolli oil spray, extra light | 2 sprays | 0 | 0 | 2.8 | 24
-Wattie's Chinese stir-fry veg + onion | 150 g + 1 medium onion | 3.9 | 17.2 | 0.4 | 95
-Sauce: oyster, reduced-salt soy, sesame oil, stock | 1 tbsp, 1 tbsp, 1 tsp, 125 ml | 1.9 | 5.5 | 4.7 | 75
-# Dinner: mince, roast veg, yoghurt
-Beef mince 18%, browned and drained | ~168 g cooked (1/4 of 670 g from 1 kg raw) | 45.8 | 0 | 28.4 | 439
-Anchor Protein Plus Yoghurt, plain | 90 g (1/2 serve) | 7.4 | 2.2 | 1.7 | 54
-Roast veg tray (pumpkin, kumara, potato) | 300 g raw (1/4 of 1.2 kg tray) | 4.7 | 43.3 | 0.4 | 199
-Bertolli oil spray for roasting | 5 sprays per tray, 1/4 share | 0 | 0 | 1.75 | 15
-> Batch cook every 4 days: 1 rotisserie chicken (skin and bones off, ~670 g meat), 1 kg mince (~670 g cooked), 1 noodle pack, 1 roast veg tray. Split each into 4.
-> Mince: brown in a non-stick pan and pour off the fat.
-> Roast veg: 1.2 kg seasoned tray + 5 sprays of oil, roast, split into 4 dinners.
-> Shake packs dry (whey + oats + chia); pour 250 ml milk at work. 3 meals only, no snacks.
-> Egg breakfast is ~40 kcal more than the shake; best on rest days.
-> Oil spray: 1 spray = 1.5 ml = 12 kcal, so count them.
-> Unlimited: water, black coffee, tea, diet drinks, extra green veg.
-> Adjust: losing over 1.1 kg/wk after week 2, add 100-150 kcal carbs. Under 0.5 kg/wk two weeks running, split the veg tray 5 ways or lengthen the walks.
+# Meal A: mince + sweet potato bowl
+Beef mince 90/10, browned and drained | 185 g cooked (1/4 of a 1 kg pack) | 50 | 0 | 25 | 440
+Sweet potato / kumara, roasted dry or microwaved | 160 g cooked (1/4 of 800 g raw) | 3.2 | 40.2 | 0.2 | 173
+Pickled jalapeno slices, drained | 30 g | 0.3 | 0.8 | 0.2 | 8
+Sriracha | 1 tbsp (15 g) | 0.3 | 3 | 0.2 | 15
+# Meal B: chicken thigh + rice + yoghurt
+Chicken thigh, skinless boneless, cooked with no oil | 225 g cooked (1/4 of 1.2 kg raw) | 56.9 | 0 | 14.2 | 360
+Jasmine rice, white, cooked | 135 g cooked (1/4 of 180 g dry) | 3.1 | 35.5 | 0.3 | 161
+Anchor Protein Plus Yoghurt, plain | 180 g | 14.8 | 4.3 | 3.4 | 108
+> Two day types only. Training day = creamed rice + shake + Meal A + Meal B (1,890 kcal, 176 g P). Rest day = the same without the creamed rice (1,790 kcal, 173 g P).
+> Meal A and Meal B are interchangeable: one at lunch, the other at dinner. Both are ~630 kcal so the order never changes the day.
+> Weigh the four batch foods COOKED into the containers: 185 g mince, 160 g sweet potato, 225 g thigh, 135 g rice. Yoghurt (180 g) and jalapenos go on when you eat.
+> Batch cook every 4 days: 1 kg mince (~740 g cooked), 800 g raw sweet potato (~640 g cooked), 1.2 kg thigh (~900 g cooked), 180 g dry rice (~540 g cooked). Each splits into 4. If a batch comes out 30-40 g off, weigh the container grams anyway.
+> Mince: brown in a non-stick pan with no oil, pour off the fat, stir in spices (smoked paprika, cumin, garlic, onion powder, pepper, chilli). Thigh: trim fat lumps, season, dry pan, air fryer or oven, no oil.
+> Shake packs dry (1.5 scoops whey + oats + chia); pour 250 ml milk at work. Post-workout on training days, whenever on rest days. 3 meals only, no snacks.
+> Unlimited: water, black coffee, tea, diet drinks, extra green veg in either container. Oil spray if ever used: 1 spray = 12 kcal, count it.
+> Adjust: losing over 1.1 kg/wk after week 2, add 100-150 kcal carbs (rice to 170 g cooked or sweet potato to 200 g). Under 0.5 kg/wk two weeks running, drop the sriracha and cut rice to 105 g cooked, or lengthen the walks.
 > Supplements: creatine 5 g, Centrum, MitoQ omega, MitoQ Triple Magnesium before bed.`;
 function parseMealPlan(text){
   const plan={targets:null,meals:[],notes:[]}; let cur=null; const num=x=>{ const v=parseFloat(String(x).replace(/,/g,'')); return isNaN(v)?0:v; };
@@ -329,7 +322,7 @@ function migrate(){
   S.settings=Object.assign({defaultRest:90,autoRest:true},S.settings||{});
   if(!S.cardioOptions||!S.cardioOptions.length){ const first=S.cardioName||'Stairmaster'; S.cardioOptions=[first,...['Treadmill','Bike','Rower','Elliptical','Jog','Walk'].filter(x=>x!==first)]; }
   if(typeof S.mealPlan!=='string') S.mealPlan=MEAL_PLAN_TEXT;
-  // v1.5.0 / v1.7.0: load the updated cut plan once; the old text is kept in mealPlanPrev
+  // v1.5.0 / v1.7.0 / v1.8.1: load the updated cut plan once; the old text is kept in mealPlanPrev
   if((S.mealPlanVersion||1)<MEAL_PLAN_VERSION){ if(S.mealPlan!==MEAL_PLAN_TEXT) S.mealPlanPrev=S.mealPlan; S.mealPlan=MEAL_PLAN_TEXT; S.mealPlanVersion=MEAL_PLAN_VERSION; }
   if(!S.days||typeof S.days!=='object') S.days={};
   if(S.lastExport===undefined) S.lastExport=null;
@@ -618,7 +611,7 @@ const views={
       <h2>Data</h2><div class="stack"><button class="btn" data-action="export">Export backup (JSON)</button>
       <button class="btn" data-action="import">Import backup</button><input type="file" id="importfile" accept="application/json" hidden>
       <button class="btn danger" data-action="reset">Reset everything</button></div>
-      <p class="small muted" style="margin-top:20px">Data lives on this phone only. The backup includes workouts, comments, daily weigh-ins, meal ticks and mobility nights. ${S.lastExport?'Last export '+esc(new Date(S.lastExport).toLocaleDateString())+'.':'Not exported yet.'}</p><p class="small muted">Lift v1.8.0</p>`;
+      <p class="small muted" style="margin-top:20px">Data lives on this phone only. The backup includes workouts, comments, daily weigh-ins, meal ticks and mobility nights. ${S.lastExport?'Last export '+esc(new Date(S.lastExport).toLocaleDateString())+'.':'Not exported yet.'}</p><p class="small muted">Lift v1.8.1</p>`;
   },
 
   editor(){

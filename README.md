@@ -14,6 +14,7 @@ Open the URL in Safari > Share > Add to Home Screen. Launch from the icon so it 
 Replace `index.html` and `sw.js` in the repo. The `CACHE` name in `sw.js` is bumped each release so phones pick up the new version (open the app, close it fully, open again).
 
 ## Changelog
+- **1.8.1** — Cut restarted 19 Oct 2026: new plan at 1,900 kcal / 175 g protein. Plain creamed rice pre-workout (training days), 1.5-scoop shake, and two interchangeable container meals weighed cooked: 90/10 mince + sweet potato (185 g + 160 g) and chicken thigh + jasmine rice + yoghurt (225 g + 135 g + 180 g). Egg swap removed. Restores `sw.js`, which had been shipped empty since 1.7.1 (offline mode was off); cache `lift-v9`.
 - **1.8.0** — Diagrams for every mobility exercise and level (start and end positions, what to feel, kit variants), a full illustrated library of the stretches and extras, and a demo-search button on each step.
 - **1.7.1** — Dinner yoghurt halved to 90 g.
 - **1.7.0** — 1.5.1 meal plan yields merged with the Mobility tab (1.5.1 and 1.6.0 were built in parallel).
